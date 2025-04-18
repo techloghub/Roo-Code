@@ -32,6 +32,11 @@ has_asdf_plugin() {
 
 build_extension() {
   echo "🔨 Building the Roo Code extension..."
+  # Ensure Node.js is properly set up
+  if ! command -v node &>/dev/null; then
+    echo "⚠️ Node.js is not properly set up. Please run the script again and select Node.js installation."
+    exit 1
+  fi
   cd ..
   mkdir -p bin
   npm run install-extension -- --silent --no-audit || exit 1
@@ -106,9 +111,12 @@ sudo apt-get install -y \
 
 # Install asdf
 if ! command -v asdf &>/dev/null; then
-  echo "🛠️ Installing asdf..."
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.13.1 || exit 1
-  
+  if [[ -d "$HOME/.asdf" ]]; then
+    echo "ℹ️ $HOME/.asdf directory already exists, skipping installation"
+  else
+    echo "🛠️ Installing asdf..."
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.13.1 || exit 1
+  fi
   # Add asdf to shell configuration
   if [[ "$SHELL" == */bash ]]; then
     echo ". \"\$HOME/.asdf/asdf.sh\"" >> ~/.bashrc
@@ -157,21 +165,31 @@ for i in "${!options[@]}"; do
 
   case "${plugin}" in
   "nodejs")
-    if ! command -v node &>/dev/null; then
+    if ! asdf plugin list | grep -q nodejs; then
+      asdf plugin add nodejs || exit 1
+    fi
+    
+    if ! command -v node &>/dev/null || [[ "$(node --version)" != "v20.18.1" ]]; then
       asdf install nodejs v20.18.1 || exit 1
-      asdf set nodejs v20.18.1 || exit 1
+      asdf global nodejs v20.18.1 || exit 1
+      asdf reshim nodejs
+      # Create .tool-versions files in both directories
+      echo "nodejs v20.18.1" > .tool-versions
+      echo "nodejs v20.18.1" > ../.tool-versions
+      # Source asdf environment to ensure node is available
+      . "$HOME/.asdf/asdf.sh"
       NODE_VERSION=$(node --version)
       echo "✅ Node.js is installed ($NODE_VERSION)"
     else
+      # Ensure .tool-versions files exist in both directories
+      if [[ ! -f .tool-versions ]] || ! grep -q "nodejs v20.18.1" .tool-versions; then
+        echo "nodejs v20.18.1" > .tool-versions
+      fi
+      if [[ ! -f ../.tool-versions ]] || ! grep -q "nodejs v20.18.1" ../.tool-versions; then
+        echo "nodejs v20.18.1" > ../.tool-versions
+      fi
       NODE_VERSION=$(node --version)
       echo "✅ Node.js is installed ($NODE_VERSION)"
-    fi
-
-    if [[ $(node --version) != "v20.18.1" ]]; then
-      NODE_VERSION=$(node --version)
-      echo "🚨 You have the wrong version of node installed ($NODE_VERSION)."
-      echo "💡 If you are using nvm then run 'nvm install' to install the version specified by the repo's .nvmrc."
-      exit 1
     fi
     ;;
 
@@ -211,7 +229,9 @@ for i in "${!options[@]}"; do
   "rust")
     if ! command -v rustc &>/dev/null; then
       asdf install rust 1.85.1 || exit 1
-      asdf set rust 1.85.1 || exit 1
+      asdf global rust 1.85.1 || exit 1
+      # Source asdf environment to ensure rustc is available
+      . "$HOME/.asdf/asdf.sh"
       RUST_VERSION=$(rustc --version)
       echo "✅ Rust is installed ($RUST_VERSION)"
     else
@@ -314,3 +334,4 @@ if ! nc -z localhost 3000; then
 else
   echo "👟 The evals web app is running at http://localhost:3000"
 fi
+
