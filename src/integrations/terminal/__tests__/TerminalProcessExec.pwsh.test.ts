@@ -79,15 +79,18 @@ async function testPowerShellCommand(
 			executeCommand: jest.fn(),
 			cwd: vscode.Uri.file("/test/path"),
 		},
-		name: "Roo Code",
+		name: "test-terminal",
 		processId: Promise.resolve(123),
 		creationOptions: {},
 		exitStatus: undefined,
-		state: { isInteractedWith: true },
-		dispose: jest.fn(),
-		hide: jest.fn(),
-		show: jest.fn(),
+		state: {
+			isInteractedWith: false,
+			shell: "pwsh",
+		},
 		sendText: jest.fn(),
+		show: jest.fn(),
+		hide: jest.fn(),
+		dispose: jest.fn(),
 	}
 
 	// Create terminal info with running state

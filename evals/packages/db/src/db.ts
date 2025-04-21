@@ -7,7 +7,16 @@ if ((!process.env.TURSO_CONNECTION_URL || !process.env.TURSO_AUTH_TOKEN) && !pro
 }
 
 const connection = process.env.BENCHMARKS_DB_PATH
-	? { url: process.env.BENCHMARKS_DB_PATH, concurrency: 50 }
+	? {
+			url: process.env.BENCHMARKS_DB_PATH,
+			concurrency: 1,
+			// Add SQLite-specific parameters
+			pragma: {
+				journal_mode: "WAL",
+				busy_timeout: 30000,
+				synchronous: "NORMAL",
+			},
+		}
 	: { url: process.env.TURSO_CONNECTION_URL!, authToken: process.env.TURSO_AUTH_TOKEN! }
 
 export const db = drizzle({ schema, connection })
